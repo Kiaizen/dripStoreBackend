@@ -1,0 +1,228 @@
+openapi: 3.0.3
+info:
+  title: Drip Store API
+  version: 1.0.0
+  description: API da loja virtual Drip Store
+
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /v1/user:
+    post:
+      summary: Criar novo usuário
+      tags: [Usuários]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [firstname, surname, email, password, confirmPassword]
+              type: object
+              properties:
+                firstname:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                confirmPassword:
+                  type: string
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+        '400':
+          description: Dados inválidos
+
+  /v1/user/token:
+    post:
+      summary: Gerar token JWT
+      tags: [Autenticação]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [email, password]
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token gerado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400':
+          description: Email ou senha inválidos
+
+  /v1/user/{id}:
+    get:
+      summary: Buscar usuário por ID
+      tags: [Usuários]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Usuário encontrado
+        '404':
+          description: Usuário não encontrado
+
+    put:
+      summary: Atualizar usuário
+      tags: [Usuários]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstname:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '204':
+          description: Usuário atualizado
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Token ausente ou inválido
+        '404':
+          description: Usuário não encontrado
+
+    delete:
+      summary: Remover usuário
+      tags: [Usuários]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Usuário removido com sucesso
+        '401':
+          description: Token ausente ou inválido
+        '404':
+          description: Usuário não encontrado
+
+  /v1/category:
+    post:
+      summary: Criar categoria
+      tags: [Categorias]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [name, slug, use_in_menu]
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                use_in_menu:
+                  type: boolean
+      responses:
+        '201':
+          description: Categoria criada com sucesso
+        '400':
+          description: Dados inválidos
+
+  /v1/category/search:
+    get:
+      summary: Buscar categorias com filtros
+      tags: [Categorias]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: fields
+          in: query
+          schema:
+            type: string
+        - name: use_in_menu
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de categorias retornada com sucesso
+
+  /v1/category/{id}:
+    get:
+      summary: Obter categoria por ID
+      tags: [Categorias]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Categoria encontrada
+        '404':
+          description: Categoria não encontrada
+
+    put:
+      summary: Atualizar categoria
+      tags: [Categorias]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                use_in_menu:
+                  type: boolean
+      responses:
+        '204':
+          description: Categoria atualizada com sucesso
+
+    delete:
+      summary: Remover categoria
+      tags: [Categorias]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Categoria removida com sucesso
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
