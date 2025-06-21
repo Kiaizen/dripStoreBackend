@@ -1,58 +1,158 @@
 openapi: 3.0.0
 info:
-  title: DripStore Backend API
-  description: API para o e-commerce DripStore - Loja de roupas urbanas
+  title: Drip Store API
   version: 1.0.0
+  description: API para gerenciamento de loja online Drip Store
 servers:
-  - url: http://localhost:3000
-    description: Servidor de desenvolvimento
-  - url: https://dripstore-backend-production.up.railway.app
-    description: Servidor de produção
-
-tags:
-  - name: Autenticação
-    description: Operações de login e registro
-  - name: Produtos
-    description: Operações com produtos da loja
-  - name: Usuários
-    description: Operações com usuários
-  - name: Pedidos
-    description: Operações com pedidos
+  - url: http://localhost:3000/v1
+    description: Servidor local de desenvolvimento
 
 paths:
-  /api/auth/register:
-    post:
-      tags: [Autenticação]
-      summary: Registrar novo usuário
+  /user/{id}:
+    get:
+      summary: Obter usuário por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Usuário encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  firstname:
+                    type: string
+                  surname:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+        '404':
+          description: Usuário não encontrado
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Usuário não encontrado
+
+    put:
+      summary: Atualizar usuário
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserRegister'
+              type: object
+              properties:
+                firstname:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '204':
+          description: Atualização realizada com sucesso
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Token faltando ou inválido
+        '404':
+          description: Usuário não encontrado
+
+    delete:
+      summary: Deletar usuário
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Usuário deletado com sucesso
+        '401':
+          description: Token faltando ou inválido
+        '404':
+          description: Usuário não encontrado
+
+  /user:
+    post:
+      summary: Criar usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firstname
+                - surname
+                - email
+                - password
+                - confirmPassword
+              properties:
+                firstname:
+                  type: string
+                surname:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                confirmPassword:
+                  type: string
       responses:
         '201':
           description: Usuário criado com sucesso
           content:
-            application/json:
+            text/plain:
               schema:
-                $ref: '#/components/schemas/User'
+                type: string
+                example: Usuário criado com sucesso
         '400':
-          description: Dados inválidos ou usuário já existe
+          description: Dados inválidos ou campos faltando
 
-  /api/auth/login:
+  /user/token:
     post:
-      tags: [Autenticação]
-      summary: Login de usuário
+      summary: Gerar token JWT
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserLogin'
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
       responses:
         '200':
-          description: Login bem-sucedido
+          description: Token gerado com sucesso
           content:
             application/json:
               schema:
@@ -60,39 +160,273 @@ paths:
                 properties:
                   token:
                     type: string
-                    description: JWT token para autenticação
-                  user:
-                    $ref: '#/components/schemas/User'
-        '401':
-          description: Credenciais inválidas
+        '400':
+          description: Dados inválidos ou faltando
 
-  /api/products:
+  /category/search:
     get:
-      tags: [Produtos]
-      summary: Listar todos os produtos
+      summary: Buscar categorias
       parameters:
-        - in: query
-          name: category
-          schema:
-            type: string
-          description: Filtrar por categoria
-        - in: query
-          name: limit
+        - name: limit
+          in: query
           schema:
             type: integer
-          description: Limitar número de resultados
+            default: 12
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: fields
+          in: query
+          schema:
+            type: string
+        - name: use_in_menu
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de categorias
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        use_in_menu:
+                          type: boolean
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  page:
+                    type: integer
+        '400':
+          description: Parâmetros inválidos
+
+  /category:
+    post:
+      summary: Criar categoria
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - use_in_menu
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                use_in_menu:
+                  type: boolean
+      responses:
+        '201':
+          description: Categoria criada com sucesso
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Token faltando ou inválido
+
+  /category/{id}:
+    get:
+      summary: Obter categoria por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Categoria encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  use_in_menu:
+                    type: boolean
+        '404':
+          description: Categoria não encontrada
+
+    put:
+      summary: Atualizar categoria
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                use_in_menu:
+                  type: boolean
+      responses:
+        '204':
+          description: Categoria atualizada com sucesso
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Token faltando ou inválido
+        '404':
+          description: Categoria não encontrada
+
+    delete:
+      summary: Deletar categoria
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Categoria deletada com sucesso
+        '401':
+          description: Token faltando ou inválido
+        '404':
+          description: Categoria não encontrada
+
+  /product/search:
+    get:
+      summary: Buscar produtos
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 12
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: fields
+          in: query
+          schema:
+            type: string
+        - name: match
+          in: query
+          schema:
+            type: string
+        - name: category_ids
+          in: query
+          schema:
+            type: string
+        - name: price-range
+          in: query
+          schema:
+            type: string
+        - name: option[id]
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: Lista de produtos
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Product'
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        enabled:
+                          type: boolean
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        stock:
+                          type: integer
+                        description:
+                          type: string
+                        price:
+                          type: number
+                          format: float
+                        price_with_discount:
+                          type: number
+                          format: float
+                        category_ids:
+                          type: array
+                          items:
+                            type: integer
+                        images:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              content:
+                                type: string
+                        options:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              title:
+                                type: string
+                              values:
+                                type: array
+                                items:
+                                  type: string
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  page:
+                    type: integer
+        '400':
+          description: Parâmetros inválidos
+
+  /product:
     post:
-      tags: [Produtos]
-      summary: Criar novo produto (admin)
+      summary: Criar produto
       security:
         - bearerAuth: []
       requestBody:
@@ -100,617 +434,236 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductCreate'
+              type: object
+              required:
+                - name
+                - slug
+                - stock
+                - price
+              properties:
+                enabled:
+                  type: boolean
+                name:
+                  type: string
+                slug:
+                  type: string
+                stock:
+                  type: integer
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: float
+                price_with_discount:
+                  type: number
+                  format: float
+                category_ids:
+                  type: array
+                  items:
+                    type: integer
+                images:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      content:
+                        type: string
+                options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      shape:
+                        type: string
+                      radius:
+                        type: integer
+                      type:
+                        type: string
+                      values:
+                        type: array
+                        items:
+                          type: string
       responses:
         '201':
           description: Produto criado com sucesso
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas administradores podem criar produtos
-
-  /api/products/{id}:
-    get:
-      tags: [Produtos]
-      summary: Obter detalhes de um produto
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID do produto
-      responses:
-        '200':
-          description: Detalhes do produto
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-        '404':
-          description: Produto não encontrado
-    put:
-      tags: [Produtos]
-      summary: Atualizar produto (admin)
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID do produto
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductUpdate'
-      responses:
-        '200':
-          description: Produto atualizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas administradores podem atualizar produtos
-        '404':
-          description: Produto não encontrado
-    delete:
-      tags: [Produtos]
-      summary: Excluir produto (admin)
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID do produto
-      responses:
-        '204':
-          description: Produto excluído com sucesso
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas administradores podem excluir produtos
-        '404':
-          description: Produto não encontrado
-
-  /api/users:
-    get:
-      tags: [Usuários]
-      summary: Listar todos os usuários (admin)
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Lista de usuários
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas administradores podem listar usuários
-
-  /api/users/{id}:
-    get:
-      tags: [Usuários]
-      summary: Obter detalhes de um usuário
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID do usuário
-      responses:
-        '200':
-          description: Detalhes do usuário
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas o próprio usuário ou admin pode ver os detalhes
-        '404':
-          description: Usuário não encontrado
-    put:
-      tags: [Usuários]
-      summary: Atualizar usuário
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID do usuário
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserUpdate'
-      responses:
-        '200':
-          description: Usuário atualizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas o próprio usuário ou admin pode atualizar
-        '404':
-          description: Usuário não encontrado
-    delete:
-      tags: [Usuários]
-      summary: Excluir usuário
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID do usuário
-      responses:
-        '204':
-          description: Usuário excluído com sucesso
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas o próprio usuário ou admin pode excluir
-        '404':
-          description: Usuário não encontrado
-
-  /api/orders:
-    get:
-      tags: [Pedidos]
-      summary: Listar pedidos do usuário
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Lista de pedidos do usuário
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Order'
-        '401':
-          description: Não autorizado
-    post:
-      tags: [Pedidos]
-      summary: Criar novo pedido
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrderCreate'
-      responses:
-        '201':
-          description: Pedido criado com sucesso
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Order'
-        '401':
-          description: Não autorizado
         '400':
           description: Dados inválidos
+        '401':
+          description: Token faltando ou inválido
 
-  /api/orders/{id}:
+  /product/{id}:
     get:
-      tags: [Pedidos]
-      summary: Obter detalhes de um pedido
-      security:
-        - bearerAuth: []
+      summary: Obter produto por ID
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
-            type: string
-          description: ID do pedido
+            type: integer
       responses:
         '200':
-          description: Detalhes do pedido
+          description: Produto encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
-        '401':
-          description: Não autorizado
-        '403':
-          description: Apenas o próprio usuário ou admin pode ver o pedido
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  enabled:
+                    type: boolean
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  stock:
+                    type: integer
+                  description:
+                    type: string
+                  price:
+                    type: number
+                    format: float
+                  price_with_discount:
+                    type: number
+                    format: float
+                  category_ids:
+                    type: array
+                    items:
+                      type: integer
+                  images:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        content:
+                          type: string
+                  options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        values:
+                          type: array
+                          items:
+                            type: string
         '404':
-          description: Pedido não encontrado
+          description: Produto não encontrado
+
+    put:
+      summary: Atualizar produto
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '204':
+          description: Produto atualizado com sucesso
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Token faltando ou inválido
+        '404':
+          description: Produto não encontrado
+
+    delete:
+      summary: Deletar produto
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Produto deletado com sucesso
+        '401':
+          description: Token faltando ou inválido
+        '404':
+          description: Produto não encontrado
 
 components:
-  schemas:
-    UserRegister:
-      type: object
-      required:
-        - name
-        - email
-        - password
-      properties:
-        name:
-          type: string
-          example: João Silva
-        email:
-          type: string
-          format: email
-          example: joao@example.com
-        password:
-          type: string
-          format: password
-          minLength: 6
-          example: senhasegura123
-        isAdmin:
-          type: boolean
-          default: false
-          description: Apenas administradores podem definir como true
-
-    UserLogin:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-          example: joao@example.com
-        password:
-          type: string
-          format: password
-          example: senhasegura123
-
-    User:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 507f1f77bcf86cd799439011
-        name:
-          type: string
-          example: João Silva
-        email:
-          type: string
-          format: email
-          example: joao@example.com
-        isAdmin:
-          type: boolean
-          example: false
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    UserUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-          example: João Silva Modificado
-        email:
-          type: string
-          format: email
-          example: novojoao@example.com
-        password:
-          type: string
-          format: password
-          example: novasenha123
-
-    ProductCreate:
-      type: object
-      required:
-        - name
-        - price
-        - description
-        - category
-      properties:
-        name:
-          type: string
-          example: Camiseta Oversized
-        price:
-          type: number
-          format: float
-          minimum: 0
-          example: 99.90
-        description:
-          type: string
-          example: Camiseta oversized de algodão com estampa frontal
-        category:
-          type: string
-          example: Camisetas
-        size:
-          type: array
-          items:
-            type: string
-          example: ["P", "M", "G", "GG"]
-        color:
-          type: array
-          items:
-            type: string
-          example: ["Preto", "Branco"]
-        image:
-          type: string
-          example: /images/camiseta-oversized.jpg
-        countInStock:
-          type: integer
-          minimum: 0
-          example: 10
-
-    ProductUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-          example: Camiseta Oversized Modificada
-        price:
-          type: number
-          format: float
-          minimum: 0
-          example: 109.90
-        description:
-          type: string
-          example: Nova descrição do produto
-        category:
-          type: string
-          example: Camisetas
-        size:
-          type: array
-          items:
-            type: string
-          example: ["P", "M", "G", "GG", "XG"]
-        color:
-          type: array
-          items:
-            type: string
-          example: ["Preto", "Branco", "Cinza"]
-        image:
-          type: string
-          example: /images/camiseta-oversized-v2.jpg
-        countInStock:
-          type: integer
-          minimum: 0
-          example: 15
-
-    Product:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 507f1f77bcf86cd799439012
-        name:
-          type: string
-          example: Camiseta Oversized
-        price:
-          type: number
-          format: float
-          example: 99.90
-        description:
-          type: string
-          example: Camiseta oversized de algodão com estampa frontal
-        category:
-          type: string
-          example: Camisetas
-        size:
-          type: array
-          items:
-            type: string
-          example: ["P", "M", "G", "GG"]
-        color:
-          type: array
-          items:
-            type: string
-          example: ["Preto", "Branco"]
-        image:
-          type: string
-          example: /images/camiseta-oversized.jpg
-        countInStock:
-          type: integer
-          example: 10
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    OrderItem:
-      type: object
-      required:
-        - product
-        - quantity
-        - size
-        - color
-      properties:
-        product:
-          type: string
-          description: ID do produto
-          example: 507f1f77bcf86cd799439012
-        name:
-          type: string
-          example: Camiseta Oversized
-        quantity:
-          type: integer
-          minimum: 1
-          example: 2
-        size:
-          type: string
-          example: M
-        color:
-          type: string
-          example: Preto
-        image:
-          type: string
-          example: /images/camiseta-oversized.jpg
-        price:
-          type: number
-          format: float
-          example: 99.90
-
-    ShippingAddress:
-      type: object
-      required:
-        - address
-        - city
-        - postalCode
-        - country
-      properties:
-        address:
-          type: string
-          example: Rua das Flores, 123
-        city:
-          type: string
-          example: São Paulo
-        postalCode:
-          type: string
-          example: 01001000
-        country:
-          type: string
-          example: Brasil
-
-    PaymentResult:
-      type: object
-      properties:
-        id:
-          type: string
-          example: PAYID-MF123456789
-        status:
-          type: string
-          example: completed
-        update_time:
-          type: string
-          example: 2023-01-01T12:00:00Z
-        email_address:
-          type: string
-          format: email
-          example: comprador@example.com
-
-    OrderCreate:
-      type: object
-      required:
-        - orderItems
-        - shippingAddress
-        - paymentMethod
-      properties:
-        orderItems:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrderItem'
-        shippingAddress:
-          $ref: '#/components/schemas/ShippingAddress'
-        paymentMethod:
-          type: string
-          enum: [Pix, Cartão de Crédito, Boleto]
-          example: Pix
-        itemsPrice:
-          type: number
-          format: float
-          example: 199.80
-        shippingPrice:
-          type: number
-          format: float
-          example: 15.00
-        taxPrice:
-          type: number
-          format: float
-          example: 25.47
-        totalPrice:
-          type: number
-          format: float
-          example: 240.27
-
-    Order:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 507f1f77bcf86cd799439013
-        user:
-          type: string
-          description: ID do usuário
-          example: 507f1f77bcf86cd799439011
-        orderItems:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrderItem'
-        shippingAddress:
-          $ref: '#/components/schemas/ShippingAddress'
-        paymentMethod:
-          type: string
-          example: Pix
-        paymentResult:
-          $ref: '#/components/schemas/PaymentResult'
-        itemsPrice:
-          type: number
-          format: float
-          example: 199.80
-        shippingPrice:
-          type: number
-          format: float
-          example: 15.00
-        taxPrice:
-          type: number
-          format: float
-          example: 25.47
-        totalPrice:
-          type: number
-          format: float
-          example: 240.27
-        isPaid:
-          type: boolean
-          default: false
-        paidAt:
-          type: string
-          format: date-time
-        isDelivered:
-          type: boolean
-          default: false
-        deliveredAt:
-          type: string
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    Product:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        name:
+          type: string
+        slug:
+          type: string
+        stock:
+          type: integer
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        price_with_discount:
+          type: number
+          format: float
+        category_ids:
+          type: array
+          items:
+            type: integer
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              deleted:
+                type: boolean
+              type:
+                type: string
+              content:
+                type: string
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              deleted:
+                type: boolean
+              title:
+                type: string
+              shape:
+                type: string
+              radius:
+                type: integer
+              type:
+                type: string
+              values:
+                type: array
+                items:
+                  type: string
