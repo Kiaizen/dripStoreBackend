@@ -1,104 +1,57 @@
-const User = require('../models/User');
-const bcrypt = require('bcrypt');
+const userService = require('../services/userService');
 
-// ✅ Função para buscar usuário por ID
-const getUserById = async (req, res) => {
-  const { id } = req.params;
-
+const createUser = async (req, res) => {
   try {
-    const user = await User.findByPk(id, {
-      attributes: ['id', 'firstname', 'surname', 'email']
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-
-    return res.status(200).json(user);
-  } catch (error) {
-    return res.status(500).json({ message: 'Erro ao buscar usuário', error });
+    const result = await userService.create(req.body);
+    return res.status(201).send(result);
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
   }
 };
 
-// ✅ Função para cadastrar novo usuário
-const createUser = async (req, res) => {
-  const { firstname, surname, email, password, confirmPassword } = req.body;
-
-  if (!firstname || !surname || !email || !password || !confirmPassword) {
-    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
-  }
-
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: 'As senhas não coincidem.' });
-  }
-
+const getUserById = async (req, res) => {
   try {
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email já está em uso.' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await User.create({
-      firstname,
-      surname,
-      email,
-      password: hashedPassword
-    });
-
-    return res.status(201).json({
-      id: newUser.id,
-      firstname: newUser.firstname,
-      surname: newUser.surname,
-      email: newUser.email
-    });
+    const user = await userService.getById(req.params.id);
+    if (!user) return res.status(404).send('Usuário não encontrado');
+    return res.status(200).json(user);
   } catch (err) {
-    return res.status(500).json({ message: 'Erro ao cadastrar usuário' });
+    return res.status(500).json({ message: err.message });
   }
 };
 
 const updateUser = async (req, res) => {
-  const { id } = req.params;
-  const { firstname, surname, email } = req.body;
-
-  // Validação básica dos campos
-  if (!firstname || !surname || !email) {
-    return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
-  }
-
   try {
-    const user = await User.findByPk(id);
-    if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
-
-    await user.update({ firstname, surname, email });
-
-    return res.status(204).send(); // No Content, sem corpo
+    const updated = await userService.update(req.params.id, req.body);
+    if (!updated) return res.status(404).send();
+    return res.status(204).send();
   } catch (err) {
-    console.error('Erro ao atualizar usuário:', err);
-    return res.status(500).json({ message: 'Erro no servidor' });
+    return res.status(400).json({ message: err.message });
   }
 };
 
 const deleteUser = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const user = await User.findByPk(id);
-    if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
-
-    await user.destroy();
-
-    return res.status(204).send(); // No Content
+    const deleted = await userService.remove(req.params.id);
+    if (!deleted) return res.status(404).send();
+    return res.status(204).send();
   } catch (err) {
-    console.error('Erro ao deletar usuário:', err);
-    return res.status(500).json({ message: 'Erro no servidor' });
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+const generateToken = async (req, res) => {
+  try {
+    const token = await userService.login(req.body);
+    return res.status(200).json({ token });
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
   }
 };
 
 module.exports = {
-  getUserById,
   createUser,
+  getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  generateToken
 };

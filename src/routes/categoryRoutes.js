@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {
-  searchCategories,
+  getCategories,
   getCategoryById,
   createCategory,
   updateCategory,
@@ -9,7 +9,7 @@ const {
 } = require("../controllers/categoryController");
 const authenticateToken = require("../middleware/auth");
 
-router.get("/category/search", searchCategories);
+router.get("/category/search", getCategories);
 router.get("/category/:id", getCategoryById);
 router.post("/category", authenticateToken, createCategory);
 router.put("/category/:id", authenticateToken, updateCategory);
